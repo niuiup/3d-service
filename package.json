@@ -1,0 +1,12 @@
+{
+  "name": "3d-service",
+  "version": "1.0.0",
+  "description": "A simple 3D service using Three.js",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1"
+  }
+}
