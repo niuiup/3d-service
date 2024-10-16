@@ -1,42 +1,158 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Service</title>
+    <title>3D визуализация изображений на кубе</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
-        body { margin: 0; }
-        canvas { display: block; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        button, label {
+            margin-right: 10px;
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        #viewer3D {
+            width: 100%;
+            height: 400px;
+            margin-top: 20px;
+            background-color: transparent;
+        }
+        #loadingIndicator {
+            display: none;
+            color: #4CAF50;
+            font-weight: bold;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <div class="container">
+        <h1>3D визуализация изображений на кубе</h1>
+        <div class="controls">
+            <label for="fileInput">
+                Загрузить изображение
+                <input type="file" id="fileInput" accept="image/*">
+            </label>
+        </div>
+        <div id="loadingIndicator">Загрузка изображения...</div>
+        <div id="viewer3D"></div>
+    </div>
+
     <script>
-        // Сцена
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer();
+        const fileInput = document.getElementById('fileInput');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        let scene, camera, renderer, texture, materials, mesh;
 
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+        fileInput.addEventListener('change', handleFileSelect);
 
-        // Геометрия и материал
-        const geometry = new THREE.BoxGeometry();
-        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-        const cube = new THREE.Mesh(geometry, material);
-        scene.add(cube);
-
-        camera.position.z = 5;
-
-        // Анимация
-        function animate() {
-            requestAnimationFrame(animate);
-            cube.rotation.x += 0.01;
-            cube.rotation.y += 0.01;
-            renderer.render(scene, camera);
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                loadingIndicator.style.display = 'block';
+                console.log('Начало загрузки изображения');
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    console.log('Изображение успешно загружено');
+                    show3DView(e.target.result);
+                }
+                reader.onerror = function(e) {
+                    console.error('Ошибка при чтении файла:', e);
+                    loadingIndicator.style.display = 'none';
+                }
+                reader.readAsDataURL(file);
+            } else {
+                console.error('Выбран неверный тип файла');
+            }
+            event.target.value = '';
         }
 
-        animate();
+        function initThreeJS() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ alpha: true });
+            renderer.setClearColor(0x000000, 0);
+            renderer.setSize(800, 400);
+            document.getElementById('viewer3D').appendChild(renderer.domElement);
+
+            camera.position.z = 5;
+
+            const animate = () => {
+                requestAnimationFrame(animate);
+                if (mesh) {
+                    mesh.rotation.x += 0.01;
+                    mesh.rotation.y += 0.01;
+                }
+                renderer.render(scene, camera);
+            };
+            animate();
+        }
+
+        function show3DView(imageSrc) {
+            if (!scene) {
+                initThreeJS();
+            }
+
+            if (mesh) {
+                scene.remove(mesh);
+            }
+
+            texture = new THREE.TextureLoader().load(imageSrc, 
+                () => {
+                    console.log('Текстура успешно загружена');
+                    loadingIndicator.style.display = 'none';
+                },
+                undefined,
+                (err) => {
+                    console.error('Ошибка при загрузке текстуры:', err);
+                    loadingIndicator.style.display = 'none';
+                }
+            );
+
+            materials = [
+                new THREE.MeshBasicMaterial({ map: texture }),
+                new THREE.MeshBasicMaterial({ map: texture }),
+                new THREE.MeshBasicMaterial({ map: texture }),
+                new THREE.MeshBasicMaterial({ map: texture }),
+                new THREE.MeshBasicMaterial({ map: texture }),
+                new THREE.MeshBasicMaterial({ map: texture })
+            ];
+
+            const geometry = new THREE.BoxGeometry(3, 3, 3);
+            mesh = new THREE.Mesh(geometry, materials);
+            scene.add(mesh);
+        }
+
+        window.addEventListener('resize', () => {
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(800, 400);
+            }
+        });
+
+        console.log('Скрипт инициализирован');
     </script>
 </body>
 </html>
